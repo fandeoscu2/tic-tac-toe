@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tic Tac Toe</title>
+    <style>
+    @keyframes drawX {
+  0% {
+      stroke-dasharray: 0 60;
+  }
+  50% {
+      stroke-dasharray: 30 30;
+  }
+  100% {
+      stroke-dasharray: 60 0;
+  }
+}
+
+@keyframes drawO {
+  0% {
+      stroke-dasharray: 0 94.24777960769379;
+  }
+  100% {
+      stroke-dasharray: 94.24777960769379 0;
+  }
+}
+
+body {
+  font-family: Arial, sans-serif;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background-color: #f0f0f0;
+  margin: 0;
+  background-image: url('https://www.transparenttextures.com/patterns/wood.png');
+}
+
+#game {
+  text-align: center;
+}
+
+h1 {
+  font-size: 3em;
+  color: #333;
+  text-shadow: 2px 2px 4px #aaa;
+  margin-bottom: 20px;
+}
+
+#controls {
+  margin-bottom: 20px;
+}
+
+#controls button {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  margin: 5px;
+}
+
+#board {
+  width: 360px;
+  height: 360px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  position: relative;
+  margin: 0 auto;
+  border: 10px solid transparent;
+  box-sizing: content-box;
+}
+
+.cell {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.cell svg {
+  width: 60px;
+  height: 60px;
+  stroke-width: 6px;
+  stroke-linecap: round;
+  fill: none;
+}
+
+.cell .x {
+  stroke: #FF5733;
+  stroke-dasharray: 0 60;
+  animation: drawX 0.4s forwards;
+}
+
+.cell .o {
+  stroke: #33A1FF;
+  stroke-dasharray: 0 94.24777960769379;
+  animation: drawO 0.4s forwards;
+}
+
+.cell:nth-child(1) { border-right: 4px solid black; border-bottom: 4px solid black; }
+.cell:nth-child(2) { border-bottom: 4px solid black; }
+.cell:nth-child(3) { border-left: 4px solid black; border-bottom: 4px solid black; }
+.cell:nth-child(4) { border-right: 4px solid black; }
+.cell:nth-child(6) { border-left: 4px solid black; }
+.cell:nth-child(7) { border-right: 4px solid black; border-top: 4px solid black; }
+.cell:nth-child(8) { border-top: 4px solid black; }
+.cell:nth-child(9) { border-left: 4px solid black; border-top: 4px solid black; }
+
+.hidden {
+  display: none;
+}
+
+#restart {
+  padding: 10px 20px;
+  font-size: 16px;
+  cursor: pointer;
+  margin-top: 20px;
+}
+
+    </style>
+</head>
+<body>
+    <div id="game">
+        <h1>Tic Tac Toe</h1>
+        <div id="controls">
+            <button id="play-human">Jugar contra Humano</button>
+            <button id="play-robot">Jugar contra Robot</button>
+        </div>
+        <div id="board" class="hidden">
+            <div class="cell" data-index="0"></div>
+            <div class="cell" data-index="1"></div>
+            <div class="cell" data-index="2"></div>
+            <div class="cell" data-index="3"></div>
+            <div class="cell" data-index="4"></div>
+            <div class="cell" data-index="5"></div>
+            <div class="cell" data-index="6"></div>
+            <div class="cell" data-index="7"></div>
+            <div class="cell" data-index="8"></div>
+        </div>
+        <button id="restart" class="hidden">Reiniciar Juego</button>
+    </div>
+    <script>
+document.addEventListener("DOMContentLoaded", () => {
+  const cells = document.querySelectorAll(".cell");
+  const restartButton = document.getElementById("restart");
+  const playHumanButton = document.getElementById("play-human");
+  const playRobotButton = document.getElementById("play-robot");
+  const board = document.getElementById("board");
+  const controls = document.getElementById("controls");
+  let currentPlayer = "X";
+  let gameBoard = ["", "", "", "", "", "", "", "", ""];
+  let isGameActive = true;
+  let isPlayingAgainstRobot = false;
+
+  const winningConditions = [
+      [0, 1, 2],
+      [3, 4, 5],
+      [6, 7, 8],
+      [0, 3, 6],
+      [1, 4, 7],
+      [2, 5, 8],
+      [0, 4, 8],
+      [2, 4, 6],
+  ];
+
+  const createSvgElement = (type, className) => {
+      const svgNS = "http://www.w3.org/2000/svg";
+      const element = document.createElementNS(svgNS, type);
+      element.setAttribute("class", className);
+      return element;
+  };
+
+  const handleCellClick = (e) => {
+      const clickedCell = e.target;
+      const clickedCellIndex = parseInt(clickedCell.getAttribute('data-index'));
+
+      if (gameBoard[clickedCellIndex] !== "" || !isGameActive) {
+          return;
+      }
+
+      gameBoard[clickedCellIndex] = currentPlayer;
+      drawSymbol(clickedCell, currentPlayer);
+
+      if (checkForWinner()) {
+          isGameActive = false;
+          alert(`Jugador ${currentPlayer} ha ganado!`);
+          return;
+      }
+
+      if (!gameBoard.includes("")) {
+          isGameActive = false;
+          alert("Empate!");
+          return;
+      }
+
+      currentPlayer = currentPlayer === "X" ? "O" : "X";
+
+      if (isPlayingAgainstRobot && currentPlayer === "O") {
+          setTimeout(robotPlay, 1000); // 1000 milisegundos = 1 segundo
+      }
+  };
+
+  const drawSymbol = (cell, player) => {
+      if (player === "X") {
+          const svg = createSvgElement("svg", "x");
+          const line1 = createSvgElement("line", "");
+          line1.setAttribute("x1", "10");
+          line1.setAttribute("y1", "10");
+          line1.setAttribute("x2", "50");
+          line1.setAttribute("y2", "50");
+          const line2 = createSvgElement("line", "");
+          line2.setAttribute("x1", "50");
+          line2.setAttribute("y1", "10");
+          line2.setAttribute("x2", "10");
+          line2.setAttribute("y2", "50");
+          svg.appendChild(line1);
+          svg.appendChild(line2);
+          cell.appendChild(svg);
+      } else {
+          const svg = createSvgElement("svg", "o");
+          const circle = createSvgElement("circle", "");
+          circle.setAttribute("cx", "30");
+          circle.setAttribute("cy", "30");
+          circle.setAttribute("r", "25");
+          svg.appendChild(circle);
+          cell.appendChild(svg);
+      }
+  };
+
+  const checkForWinner = () => {
+      let roundWon = false;
+
+      for (let i = 0; i < winningConditions.length; i++) {
+          const winCondition = winningConditions[i];
+          const a = gameBoard[winCondition[0]];
+          const b = gameBoard[winCondition[1]];
+          const c = gameBoard[winCondition[2]];
+
+          if (a === "" || b === "" || c === "") {
+              continue;
+          }
+
+          if (a === b && b === c) {
+              roundWon = true;
+              break;
+          }
+      }
+
+      return roundWon;
+  };
+
+  const restartGame = () => {
+      gameBoard = ["", "", "", "", "", "", "", "", ""];
+      isGameActive = true;
+      currentPlayer = "X";
+      cells.forEach(cell => cell.innerHTML = "");
+  };
+
+  const startGame = (againstRobot) => {
+      isPlayingAgainstRobot = againstRobot;
+      controls.classList.add("hidden");
+      board.classList.remove("hidden");
+      restartButton.classList.remove("hidden");
+      restartGame();
+  };
+
+  const robotPlay = () => {
+    setTimeout(() => {
+        const bestMove = minimax(gameBoard, "O").index;
+        gameBoard[bestMove] = "O";
+        const cell = document.querySelector(`.cell[data-index='${bestMove}']`);
+        drawSymbol(cell, "O");
+
+        if (checkForWinner()) {
+            setTimeout(() => {
+                isGameActive = false;
+                alert("El robot ha ganado!");
+            }, 500); // Retraso de medio segundo
+            return;
+        }
+
+        if (!gameBoard.includes("")) {
+            setTimeout(() => {
+                isGameActive = false;
+                alert("Empate!");
+            }, 500); // Retraso de medio segundo
+            return;
+        }
+
+        currentPlayer = "X";
+    }, 500); // Retraso de medio segundo
+};
+
+
+  const minimax = (newBoard, player) => {
+      const availSpots = newBoard.reduce((acc, val, index) => (val === "" ? acc.concat(index) : acc), []);
+
+      if (checkWin(newBoard, "X")) {
+          return { score: -10 };
+      } else if (checkWin(newBoard, "O")) {
+          return { score: 10 };
+      } else if (availSpots.length === 0) {
+          return { score: 0 };
+      }
+
+      const moves = [];
+
+      for (let i = 0; i < availSpots.length; i++) {
+          const move = {};
+          move.index = availSpots[i];
+          newBoard[availSpots[i]] = player;
+
+          if (player === "O") {
+              const result = minimax(newBoard, "X");
+              move.score = result.score;
+          } else {
+              const result = minimax(newBoard, "O");
+              move.score = result.score;
+          }
+
+          newBoard[availSpots[i]] = "";
+          moves.push(move);
+      }
+
+      let bestMove;
+      if (player === "O") {
+          let bestScore = -Infinity;
+          for (let i = 0; i < moves.length; i++) {
+              if (moves[i].score > bestScore) {
+                  bestScore = moves[i].score;
+                  bestMove = i;
+              }
+          }
+      } else {
+          let bestScore = Infinity;
+          for (let i = 0; i < moves.length; i++) {
+              if (moves[i].score < bestScore) {
+                  bestScore = moves[i].score;
+                  bestMove = i;
+              }
+          }
+      }
+
+      return moves[bestMove];
+  };
+
+  const checkWin = (board, player) => {
+      return winningConditions.some(condition => {
+          return condition.every(index => board[index] === player);
+      });
+  };
+
+  cells.forEach(cell => cell.addEventListener("click", handleCellClick));
+  restartButton.addEventListener("click", restartGame);
+  playHumanButton.addEventListener("click", () => startGame(false));
+  playRobotButton.addEventListener("click", () => startGame(true));
+});
+
+</script>
+</body>
+</html>
